@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BITSAT Mock Test Series - Live Examination Engine</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-weight/6.4.0/css/all.min.css">
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+    
+    <style>
+        .palette-btn { transition: all 0.15s ease-in-out; }
+        .no-select { user-select: none; -webkit-user-select: none; }
+        /* Professional CBT Scrollbars styling */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans min-h-screen flex flex-col no-select">
+
+    <header class="bg-slate-900 text-white px-4 py-3 flex justify-between items-center border-b-4 border-blue-700 shadow-md shrink-0">
+        <div class="flex items-center space-x-4">
+            <h1 class="text-lg font-bold tracking-tight text-blue-400">BITSAT Mock Simulator 1</h1>
+            <div class="hidden sm:flex space-x-2 text-xs bg-slate-800 px-3 py-1.5 rounded border border-slate-700 text-slate-300">
+                <span>Maximum Marks: <strong class="text-white">390</strong></span>
+                <span class="text-slate-600">|</span>
+                <span>Questions: <strong class="text-white">130</strong></span>
+            </div>
+        </div>
+        
+        <div class="flex items-center space-x-4">
+            <div class="bg-black/40 border border-amber-500/30 px-4 py-1.5 rounded flex items-center space-x-3">
+                <i class="fa-solid fa-clock text-amber-400 animate-pulse text-sm"></i>
+                <span class="text-xs font-bold text-slate-400 tracking-wider uppercase">Time Left:</span>
+                <span id="cbt-countdown-clock" class="font-mono text-xl font-black text-amber-400 tracking-widest">03:00:00</span>
+            </div>
+            <button id="top-submit-trigger" onclick="triggerTestSubmission(false)" class="bg-red-600 hover:bg-red-700 text-white font-bold text-xs uppercase tracking-wider px-4 py-2 rounded shadow transition">
+                Submit Exam
+            </button>
+        </div>
+    </header>
+
+    <nav class="bg-slate-800 text-white px-4 border-b border-slate-700 shadow flex justify-between items-center shrink-0">
+        <div class="flex space-x-1 overflow-x-auto" id="section-tabs-container">
+            </div>
+        <button onclick="emergencyClearCache()" class="text-[10px] bg-slate-700 text-slate-400 hover:text-red-400 px-2 py-1 rounded transition border border-slate-600">
+            Reset Data Cache
+        </button>
+    </nav>
+
+    <div id="primary-test-workspace" class="flex-grow flex flex-col lg:flex-row overflow-hidden w-full">
+        
+        <div class="flex-grow flex flex-col justify-between bg-white overflow-y-auto p-4 md:p-6 shadow-inner relative">
+            <div id="loading-overlay" class="absolute inset-0 bg-white z-50 flex flex-col items-center justify-center space-y-3">
+                <div class="w-12 h-12 border-4 border-slate-200 border-t-blue-600 rounded-full animate-spin"></div>
+                <p class="text-sm font-semibold text-slate-500">Parsing questions.md with live dataset mappings...</p>
+            </div>
+
+            <div class="w-full max-w-4xl mx-auto flex-grow">
+                <div class="flex justify-between items-center border-b border-slate-200 pb-3 mb-4">
+                    <span class="text-sm font-bold text-slate-500 uppercase tracking-wider" id="question-header-id">Question Details</span>
+                    <span class="text-xs bg-slate-100 px-2 py-1 rounded border text-slate-500 font-medium">Type: Single Correct Option MCQ</span>
+                </div>
+
+                <div id="rendered-question-box" class="text-base md:text-lg font-medium text-slate-900 leading-relaxed mb-6 block">
+                    </div>
+
+                <div id="question-graphic-frame" class="mb-6 hidden">
+                    <div class="p-2 border border-slate-200 rounded-lg max-w-md bg-slate-50 shadow-sm">
+                        <img id="question-image-element" src="" alt="Context Figure Data" class="max-h-64 object-contain mx-auto">
+                    </div>
+                </div>
+
+                <form id="mcq-options-form" class="space-y-3 block">
+                    </form>
+            </div>
+
+            <div class="border-t border-slate-200 pt-4 mt-6 flex flex-wrap gap-3 justify-between items-center max-w-4xl w-full mx-auto shrink-0">
+                <div class="flex space-x-2">
+                    <button onclick="markQuestionForReview()" class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded font-bold text-xs uppercase tracking-wider transition shadow-sm">
+                        Mark for Review & Next
+                    </button>
+                    <button onclick="clearSelectedResponse()" class="border border-slate-300 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded font-semibold text-xs uppercase tracking-wider transition">
+                        Clear Response
+                    </button>
+                </div>
+                <div class="flex space-x-2">
+                    <button id="prev-btn-trigger" onclick="navigateToPreviousQuestion()" class="bg-slate-600 hover:bg-slate-700 text-white px-4 py-2 rounded font-bold text-xs uppercase tracking-wider transition shadow-sm">
+                        Previous
+                    </button>
+                    <button id="save-next-btn-trigger" onclick="saveAnswerAndProceed()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded font-bold text-xs uppercase tracking-wider transition shadow-sm">
+                        Save & Next
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <aside class="w-full lg:w-80 bg-slate-50 border-t lg:border-t-0 lg:border-l border-slate-200 flex flex-col shrink-0">
+            
+            <div class="p-4 bg-slate-200/60 border-b border-slate-300 flex items-center space-x-3">
+                <div class="w-10 h-10 bg-slate-400 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                    <i class="fa-solid fa-user text-sm"></i>
+                </div>
+                <div>
+                    <h3 class="text-xs font-bold text-slate-800 tracking-tight">Candidate Verification</h3>
+                    <p class="text-[11px] text-slate-500 font-mono">Roll: BITS2026-MOCK1</p>
+                </div>
+            </div>
+
+            <div class="p-3 grid grid-cols-2 gap-2 text-[11px] font-medium border-b border-slate-200 bg-white">
+                <div class="flex items-center space-x-2">
+                    <span class="w-5 h-5 bg-emerald-600 text-white text-center rounded text-[10px] font-bold flex items-center justify-center">0</span>
+                    <span class="text-slate-600">Answered</span>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <span class="w-5 h-5 bg-red-500 text-white text-center rounded text-[10px] font-bold flex items-center justify-center">0</span>
+                    <span class="text-slate-600">Not Answered</span>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <span class="w-5 h-5 bg-purple-600 text-white text-center rounded text-[10px] font-bold flex items-center justify-center">0</span>
+                    <span class="text-slate-600">Marked Review</span>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <span class="w-5 h-5 bg-slate-200 border border-slate-300 text-slate-700 text-center rounded text-[10px] font-bold flex items-center justify-center">0</span>
+                    <span class="text-slate-600">Not Visited</span>
+                </div>
+            </div>
+
+            <div class="p-3 bg-slate-100 flex-grow overflow-y-auto">
+                <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2" id="palette-title-node">Choose Question Index</h4>
+                <div id="palette-grid-inject" class="grid grid-cols-5 gap-2">
+                    </div>
+            </div>
+
+            <div class="p-3 bg-slate-200 border-t border-slate-300 text-[10px] text-slate-500 text-center font-medium">
+                System Interface matches official BITSAT delivery portal specifications.
+            </div>
+        </aside>
+    </div>
+
+    <div id="post-test-analytics-dashboard" class="hidden flex-grow max-w-7xl w-full mx-auto px-4 py-6 overflow-y-auto">
+        <div class="bg-white border border-slate-200 rounded-xl shadow-md p-6 mb-6">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-200 pb-4 mb-6">
+                <div>
+                    <h2 class="text-2xl font-black text-slate-900">BITSAT Performance Summary Report</h2>
+                    <p class="text-xs text-slate-500 mt-0.5">Test verification complete. Final score processing computed successfully.</p>
+                </div>
+                <a href="index.html" class="mt-3 sm:mt-0 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold uppercase tracking-wide px-4 py-2.5 rounded transition">
+                    Return to Dashboard
+                </a>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+                <div class="bg-slate-900 text-white p-4 rounded-xl shadow-sm text-center">
+                    <p class="text-[10px] uppercase font-bold tracking-wider text-slate-400">Total Score</p>
+                    <p class="text-3xl font-black text-blue-400 mt-1" id="res-total-score">0 <span class="text-xs text-slate-400">/ 390</span></p>
+                </div>
+                <div class="bg-slate-50 border border-slate-200 p-4 rounded-xl text-center">
+                    <p class="text-[10px] uppercase font-bold tracking-wider text-slate-400">Attempted</p>
+                    <p class="text-2xl font-extrabold text-slate-800 mt-1" id="res-total-attempted">0</p>
+                </div>
+                <div class="bg-emerald-50 border border-emerald-200 p-4 rounded-xl text-center">
+                    <p class="text-[10px] uppercase font-bold tracking-wider text-emerald-700">Correct answers</p>
+                    <p class="text-2xl font-extrabold text-emerald-600 mt-1" id="res-total-correct">0</p>
+                </div>
+                <div class="bg-red-50 border border-red-200 p-4 rounded-xl text-center">
+                    <p class="text-[10px] uppercase font-bold tracking-wider text-red-700">Incorrect answers</p>
+                    <p class="text-2xl font-extrabold text-red-600 mt-1" id="res-total-incorrect">0</p>
+                </div>
+                <div class="bg-slate-100 border border-slate-300 p-4 rounded-xl text-center col-span-2 md:col-span-1">
+                    <p class="text-[10px] uppercase font-bold tracking-wider text-slate-500">Accuracy Rate</p>
+                    <p class="text-2xl font-extrabold text-indigo-600 mt-1" id="res-accuracy">0%</p>
+                </div>
+            </div>
+
+            <h3 class="text-base font-bold uppercase tracking-wider text-slate-900 mb-3 border-l-4 border-indigo-600 pl-2">Subject Performance Analytics Matrix</h3>
+            <div class="overflow-x-auto border border-slate-200 rounded-lg mb-8">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead>
+                        <tr class="bg-slate-100 text-slate-700 uppercase font-bold border-b border-slate-200">
+                            <th class="p-3">Subject Classification</th>
+                            <th class="p-3">Total Items</th>
+                            <th class="p-3">Attempted</th>
+                            <th class="p-3">Correct</th>
+                            <th class="p-3">Incorrect</th>
+                            <th class="p-3">Score Achieved</th>
+                        </tr>
+                    </thead>
+                    <tbody id="subject-performance-tbody" class="divide-y divide-slate-200 font-medium text-slate-700">
+                        </tbody>
+                </table>
+            </div>
+
+            <h3 class="text-base font-bold uppercase tracking-wider text-slate-900 mb-3 border-l-4 border-blue-600 pl-2">Complete Question Response Verification Logs</h3>
+            <div class="overflow-x-auto border border-slate-200 rounded-lg">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead>
+                        <tr class="bg-slate-800 text-slate-200 uppercase font-bold tracking-wide">
+                            <th class="p-3 w-16">Q.No</th>
+                            <th class="p-3 w-28">Subject</th>
+                            <th class="p-3 w-32">Status Flag</th>
+                            <th class="p-3 w-24">Marked Response</th>
+                            <th class="p-3 w-24">Correct Key</th>
+                            <th class="p-3 w-28">Time Consumed</th>
+                            <th class="p-3">Question Prompt Overview Text</th>
+                        </tr>
+                    </thead>
+                    <tbody id="detailed-audit-tbody" class="divide-y divide-slate-200 font-medium text-slate-700">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Structural Configuration Data Mapping Parameters Constants
+        const LOCAL_PREFIX = "bitsat_mt1_q_";
+        const META_KEY = "bitsat_mt1_metadata";
+        const SUBJECTS = [
+            { name: "Physics", start: 1, end: 30 },
+            { name: "Chemistry", start: 31, end: 60 },
+            { name: "LR", start: 61, end: 90 },
+            { name: "Mathematics", start: 91, end: 120 },
+            { name: "LR Part 2", start: 121, end: 130 }
+        ];
+        
+        // Comprehensive mapping array containing known images
+        const IMAGES_REPOSITORY = {
+            questions: [2, 5, 7, 8, 9, 14, 15, 19, 21, 23, 24, 27, 28, 29, 30, 32, 34, 35, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 106],
+            options: [10, 31, 33, 34, 38, 39, 47, 50, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89]
+        };
+
+        // Live memory states matrices variables
+        let questionsDataset = {};
+        let activeSubjectIdx = 0;
+        let activeQuestionId = 1;
+        let countdownDurationSeconds = 180 * 60;
+        let countTimerIntervalId = null;
+        let activeIntervalTrackingTimestamp = null;
+
+        document.addEventListener("DOMContentLoaded", () => {
+            fetchAndInitializeQuestionsEngine();
+        });
+
+        // Async Loader Engine processing markdown parsing configurations natively
+        async function fetchAndInitializeQuestionsEngine() {
+            try {
+                const response = await fetch('questions.md');
+                if (!response.ok) throw new Error("File pointer access reading questions.md denied or missing.");
+                const content = await response.text();
+                parseMarkdownQuestionsStructure(content);
+                restoreTelemetryStateData();
+                initializeRenderNavTabs();
+                renderPaletteGridDisplay();
+                switchActiveQuestionIndex(getInitialActiveQuestionForSubject());
+                initCountdownTimerClock();
+                document.getElementById("loading-overlay").classList.add("hidden");
+            } catch(err) {
+                alert("Critical System Interruption: Failed to read questions database layer.\n" + err.message);
+                console.error(err);
+            }
+        }
+
+        function parseMarkdownQuestionsStructure(text) {
+            const listings = text.split(/###\s+Q/);
+            listings.forEach(block => {
+                if (!block.trim() || block.startsWith("## ")) return;
+                
+                const lines = block.split("\n");
+                const firstLine = lines[0].trim();
+                const qNum = parseInt(firstLine.match(/^\d+/)?.[0] || "0");
+                if (!qNum) return;
+
+                let questionText = "";
+                let options = { A: "", B: "", C: "", D: "" };
+                let answerKey = "";
+                let readingOptions = false;
+
+                for (let i = 1; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (!line) continue;
+
+                    if (line.startsWith("**Question text") || line.startsWith("**") && !line.startsWith("**Answer:") && !line.startsWith("**Image:") && !line.startsWith("**Option Images:") && questionText === "") {
+                        questionText = line.replace(/^\*\*/, "").replace(/\*\*$/, "");
+                    } else if (line.startsWith("(A)")) { options.A = line.substring(3).trim(); readingOptions = true; }
+                    else if (line.startsWith("(B)")) { options.B = line.substring(3).trim(); readingOptions = true; }
+                    else if (line.startsWith("(C)")) { options.C = line.substring(3).trim(); readingOptions = true; }
+                    else if (line.startsWith("(D)")) { options.D = line.substring(3).trim(); readingOptions = true; }
+                    else if (line.startsWith("**Answer:**")) {
+                        answerKey = line.replace("**Answer:**", "").trim();
+                    } else if (!readingOptions && !line.startsWith("**Answer:") && !line.startsWith("**Image:") && !line.startsWith("**Option Images:")) {
+                        if (questionText) questionText += "\n" + line;
+                        else questionText = line;
+                    }
+                }
+
+                // Normalize structural cleanup definitions
+                if(questionText.startsWith("**")) questionText = questionText.replace(/^\*\*/, "");
+                if(questionText.endsWith("**")) questionText = questionText.replace(/\*\*$/, "");
+
+                questionsDataset[qNum] = {
+                    id: qNum,
+                    text: questionText,
+                    options: options,
+                    correct: answerKey,
+                    subject: getSubjectLabelByQuestionId(qNum)
+                };
+            });
+        }
+
+        function getSubjectLabelByQuestionId(id) {
+            const match = SUBJECTS.find(s => id >= s.start && id <= s.end);
+            return match ? match.name : "General";
+        }
+
+        function restoreTelemetryStateData() {
+            for (let i = 1; i <= 130; i++) {
+                if (!questionsDataset[i]) continue;
+                const cached = localStorage.getItem(`${LOCAL_PREFIX}${i}`);
+                if (cached) {
+                    try {
+                        const obj = JSON.parse(cached);
+                        questionsDataset[i].selectedOption = obj.selectedOption || null;
+                        questionsDataset[i].markedForReview = !!obj.markedForReview;
+                        questionsDataset[i].timeSpent = parseInt(obj.timeSpent || 0);
+                        questionsDataset[i].visited = !!obj.visited;
+                    } catch(e) {
+                        console.error("Corrupt state entity parsed for id " + i);
+                    }
+                } else {
+                    questionsDataset[i].selectedOption = null;
+                    questionsDataset[i].markedForReview = false;
+                    questionsDataset[i].timeSpent = 0;
+                    questionsDataset[i].visited = false;
+                }
+            }
+
+            const metaRaw = localStorage.getItem(META_KEY);
+            if (metaRaw) {
+                try {
+                    const meta = JSON.parse(metaRaw);
+                    if (meta.remainingTimer !== undefined) countdownDurationSeconds = parseInt(meta.remainingTimer);
+                    if (meta.testSubmitted) executeFinalUIRenderSubmission();
+                } catch(e) {
+                    console.error("Corrupt validation metadata tracks parsing failed.", e);
+                }
+            }
+        }
+
+        function syncQuestionTelemetryToStorage(id) {
+            if (!questionsDataset[id]) return;
+            const payload = {
+                selectedOption: questionsDataset[id].selectedOption,
+                markedForReview: questionsDataset[id].markedForReview,
+                timeSpent: questionsDataset[id].timeSpent,
+                visited: questionsDataset[id].visited
+            };
+            localStorage.setItem(`${LOCAL_PREFIX}${id}`, JSON.stringify(payload));
+            
+            // Sync overall tracking configuration metadata properties
+            const meta = {
+                remainingTimer: countdownDurationSeconds,
+                testSubmitted: false
+            };
+            localStorage.setItem(META_KEY, JSON.stringify(meta));
+        }
+
+        function initializeRenderNavTabs() {
+            const container = document.getElementById("section-tabs-container");
+            container.innerHTML = "";
+            
+            // Collate unified viewing tab rules
+            const displayTabs = [
+                { name: "Physics", label: "Physics (30 Q)", idx: 0 },
+                { name: "Chemistry", label: "Chemistry (30 Q)", idx: 1 },
+                { name: "Mathematics", label: "Mathematics (30 Q)", idx: 3 },
+                { name: "LR / English", label: "LR & English (40 Q)", idx: 2 } // Combines LR and LR Part 2 mapping parameters
+            ];
+
+            displayTabs.forEach(tab => {
+                const button = document.createElement("button");
+                button.id = `section-tab-node-${tab.idx}`;
+                button.className = "px-4 py-3 font-bold text-xs uppercase tracking-wider border-b-4 border-transparent hover:bg-slate-700/50 transition shrink-0";
+                button.innerText = tab.label;
+                button.onclick = () => {
+                    activeSubjectIdx = tab.idx;
+                    updateActiveTabStyles();
+                    renderPaletteGridDisplay();
+                    switchActiveQuestionIndex(getInitialActiveQuestionForSubject());
+                };
+                container.appendChild(button);
+            });
+            updateActiveTabStyles();
+        }
+
+        function updateActiveTabStyles() {
+            [0, 1, 2, 3].forEach(idx => {
+                const node = document.getElementById(`section-tab-node-${idx}`);
+                if (!node) return;
+                if (idx === activeSubjectIdx) {
+                    node.classList.remove("border-transparent", "text-slate-400");
+                    node.classList.add("border-blue-500", "text-blue-400", "bg-slate-900");
+                } else {
+                    node.classList.remove("border-blue-500", "text-blue-400", "bg-slate-900");
+                    node.classList.add("border-transparent", "text-slate-400");
+                }
+            });
+        }
+
+        function getInitialActiveQuestionForSubject() {
+            if (activeSubjectIdx === 0) return 1;       // Physics
+            if (activeSubjectIdx === 1) return 31;      // Chemistry
+            if (activeSubjectIdx === 2) return 61;      // LR Combined block
+            if (activeSubjectIdx === 3) return 91;      // Mathematics
+            return 1;
+        }
+
+        function renderPaletteGridDisplay() {
+            const grid = document.getElementById("palette-grid-inject");
+            grid.innerHTML = "";
+            
+            let boundarySets = [];
+            if (activeSubjectIdx === 0) boundarySets.push(SUBJECTS[0]);
+            else if (activeSubjectIdx === 1) boundarySets.push(SUBJECTS[1]);
+            else if (activeSubjectIdx === 2) { boundarySets.push(SUBJECTS[2]); boundarySets.push(SUBJECTS[4]); }
+            else if (activeSubjectIdx === 3) boundarySets.push(SUBJECTS[3]);
+
+            boundarySets.forEach(boundary => {
+                for (let i = boundary.start; i <= boundary.end; i++) {
+                    if (!questionsDataset[i]) continue;
+                    const q = questionsDataset[i];
+                    
+                    const btn = document.createElement("button");
+                    btn.id = `palette-btn-cell-${i}`;
+                    btn.className = "w-10 h-10 rounded font-bold text-xs palette-btn flex items-center justify-center shadow-sm border border-slate-300 ";
+                    btn.innerText = i;
+                    
+                    // Apply official standard exam color metric rules
+                    if (q.markedForReview) {
+                        btn.className += " bg-purple-600 text-white border-purple-700 hover:bg-purple-700";
+                    } else if (q.selectedOption) {
+                        btn.className += " bg-emerald-600 text-white border-emerald-700 hover:bg-emerald-700";
+                    } else if (q.visited) {
+                        btn.className += " bg-red-500 text-white border-red-600 hover:bg-red-600";
+                    } else {
+                        btn.className += " bg-slate-200 text-slate-700 border-slate-300 hover:bg-slate-300";
+                    }
+
+                    btn.onclick = () => switchActiveQuestionIndex(i);
+                    grid.appendChild(btn);
+                }
+            });
+            
+            // Synchronize active header tags
+            const titles = ["Physics Section", "Chemistry Section", "Logical Reasoning & English", "Mathematics Section"];
+            document.getElementById("palette-title-node").innerText = titles[activeSubjectIdx];
+        }
+
+        function switchActiveQuestionIndex(targetId) {
+            // Commit running execution timestamp clocks back into storage
+            commitRunningTimeSpentCounter();
+
+            if (!questionsDataset[targetId]) return;
+            
+            // Un-highlight previous item style profiles
+            const pastActiveNode = document.getElementById(`palette-btn-cell-${activeQuestionId}`);
+            if(pastActiveNode) pastActiveNode.classList.remove("ring-4", "ring-blue-400", "ring-offset-1");
+
+            activeQuestionId = targetId;
+            const q = questionsDataset[activeQuestionId];
+            q.visited = true;
+
+            // Enforce automatic sync realignment of section tabs if jumping out of bounds via programmatic triggers
+            ensureSectionTabSyncAlignment(targetId);
+
+            // Highlight active selection
+            const activeNode = document.getElementById(`palette-btn-cell-${activeQuestionId}`);
+            if(activeNode) activeNode.classList.add("ring-4", "ring-blue-400", "ring-offset-1");
+
+            // Build structural headers fields
+            document.getElementById("question-header-id").innerText = `Question ${activeQuestionId} [Section: ${q.subject}]`;
+            document.getElementById("rendered-question-box").innerHTML = q.text;
+
+            // Handle optional main question image display attributes parameters
+            const graphicFrame = document.getElementById("question-graphic-frame");
+            const imgElement = document.getElementById("question-image-element");
+            if (IMAGES_REPOSITORY.questions.includes(activeQuestionId)) {
+                imgElement.src = `images/q${activeQuestionId}.png`;
+                graphicFrame.classList.remove("hidden");
+            } else {
+                graphicFrame.classList.add("hidden");
+                imgElement.src = "";
+            }
+
+            // Build layout architecture options components selection sheet blocks
+            const optionsForm = document.getElementById("mcq-options-form");
+            optionsForm.innerHTML = "";
+
+            const hasOptionImages = IMAGES_REPOSITORY.options.includes(activeQuestionId);
+
+            ["A", "B", "C", "D"].forEach((optKey, idx) => {
+                const optIndexNumber = idx + 1;
+                const wrapper = document.createElement("label");
+                wrapper.className = "flex items-start space-x-3 p-3 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 transition cursor-pointer text-slate-800";
+                
+                const radio = document.createElement("input");
+                radio.type = "radio";
+                radio.name = "mcq-selection";
+                radio.value = optKey;
+                radio.className = "mt-1 h-4 w-4 text-blue-600 border-slate-300 focus:ring-blue-500 shrink-0";
+                if (q.selectedOption === optKey) radio.checked = true;
+
+                const contentContainer = document.createElement("div");
+                contentContainer.className = "flex flex-col space-y-2 w-full";
+
+                const textSpan = document.createElement("span");
+                textSpan.className = "text-sm font-medium leading-tight";
+                textSpan.innerHTML = `<strong class="text-slate-400 font-bold mr-1">${optKey}.</strong> ${q.options[optKey] || "Option choice detail structural component Text Profile Missing."}`;
+                contentContainer.appendChild(textSpan);
+
+                // Handle nested layout graphics options cards if required
+                if (hasOptionImages) {
+                    const optionImgDiv = document.createElement("div");
+                    optionImgDiv.className = "p-1.5 border border-slate-200 rounded bg-white max-w-xs shadow-sm mt-1";
+                    
+                    const optImg = document.createElement("img");
+                    optImg.src = `images/q${activeQuestionId}.${optIndexNumber}.png`;
+                    optImg.alt = `Option ${optKey} Layout Visual`;
+                    optImg.className = "max-h-24 object-contain";
+                    
+                    optionImgDiv.appendChild(optImg);
+                    contentContainer.appendChild(optionImgDiv);
+                }
+
+                wrapper.appendChild(radio);
+                wrapper.appendChild(contentContainer);
+                optionsForm.appendChild(wrapper);
+            });
+
+            // Re-render update elements states palette states logs mapping patterns visually
+            updatePaletteSingleCellView(activeQuestionId);
+            
+            // Force KaTeX mathematical evaluation updates on active viewport DOM tree mappings
+            triggerKaTexDOMTreeParsing();
+
+            // Set active anchor tracking timestamp records for calculation intervals
+            activeIntervalTrackingTimestamp = Date.now();
+        }
+
+        function ensureSectionTabSyncAlignment(id) {
+            let targetedIdx = activeSubjectIdx;
+            if (id >= 1 && id <= 30) targetedIdx = 0;
+            else if (id >= 31 && id <= 60) targetedIdx = 1;
+            else if ((id >= 61 && id <= 90) || (id >= 121 && id <= 130)) targetedIdx = 2;
+            else if (id >= 91 && id <= 120) targetedIdx = 3;
+
+            if (targetedIdx !== activeSubjectIdx) {
+                activeSubjectIdx = targetedIdx;
+                updateActiveTabStyles();
+                renderPaletteGridDisplay();
+            }
+        }
+
+        function updatePaletteSingleCellView(id) {
+            const btn = document.getElementById(`palette-btn-cell-${id}`);
+            if (!btn) return;
+            const q = questionsDataset[id];
+            
+            btn.className = "w-10 h-10 rounded font-bold text-xs palette-btn flex items-center justify-center shadow-sm border ";
+            if (q.markedForReview) {
+                btn.className += " bg-purple-600 text-white border-purple-700 hover:bg-purple-700";
+            } else if (q.selectedOption) {
+                btn.className += " bg-emerald-600 text-white border-emerald-700 hover:bg-emerald-700";
+            } else if (q.visited) {
+                btn.className += " bg-red-500 text-white border-red-600 hover:bg-red-600";
+            } else {
+                btn.className += " bg-slate-200 text-slate-700 border-slate-300 hover:bg-slate-300";
+            }
+            
+            if (id === activeQuestionId) {
+                btn.classList.add("ring-4", "ring-blue-400", "ring-offset-1");
+            }
+        }
+
+        function commitRunningTimeSpentCounter() {
+            if (activeQuestionId && questionsDataset[activeQuestionId] && activeIntervalTrackingTimestamp) {
+                const diff = Math.floor((Date.now() - activeIntervalTrackingTimestamp) / 1000);
+                if (diff > 0) {
+                    questionsDataset[activeQuestionId].timeSpent += diff;
+                    syncQuestionTelemetryToStorage(activeQuestionId);
+                }
+            }
+            activeIntervalTrackingTimestamp = Date.now();
+        }
+
+        function fetchSelectedRadioOptionKey() {
+            const selected = document.querySelector('input[name="mcq-selection"]:checked');
+            return selected ? selected.value : null;
+        }
+
+        function saveAnswerAndProceed() {
+            commitRunningTimeSpentCounter();
+            const optionValue = fetchSelectedRadioOptionKey();
+            
+            questionsDataset[activeQuestionId].selectedOption = optionValue;
+            questionsDataset[activeQuestionId].markedForReview = false; // Override flag upon hard commit execution choices
+            
+            syncQuestionTelemetryToStorage(activeQuestionId);
+            updatePaletteSingleCellView(activeQuestionId);
+            navigateToNextSequentialQuestion();
+        }
+
+        function markQuestionForReview() {
+            commitRunningTimeSpentCounter();
+            const optionValue = fetchSelectedRadioOptionKey();
+            
+            questionsDataset[activeQuestionId].selectedOption = optionValue;
+            questionsDataset[activeQuestionId].markedForReview = true;
+            
+            syncQuestionTelemetryToStorage(activeQuestionId);
+            updatePaletteSingleCellView(activeQuestionId);
+            navigateToNextSequentialQuestion();
+        }
+
+        function clearSelectedResponse() {
+            const checked = document.querySelector('input[name="mcq-selection"]:checked');
+            if (checked) checked.checked = false;
+            
+            questionsDataset[activeQuestionId].selectedOption = null;
+            questionsDataset[activeQuestionId].markedForReview = false;
+            
+            syncQuestionTelemetryToStorage(activeQuestionId);
+            updatePaletteSingleCellView(activeQuestionId);
+        }
+
+        function navigateToNextSequentialQuestion() {
+            let nextId = activeQuestionId + 1;
+            // Handle discontinuous leap jump over LR parts boundaries configurations gracefully if needed
+            if (activeQuestionId === 90) {
+                // If user finished LR part 1, and wants to progress sequential step, jump over Math index to LR Part 2 block entry node
+                nextId = 121;
+            } else if (activeQuestionId === 130) {
+                // Return back down loop towards Math section start block node boundaries lines
+                nextId = 91;
+            } else if (activeQuestionId === 120) {
+                // Terminate cycle at end item bounds cap
+                nextId = 1;
+            }
+            switchActiveQuestionIndex(nextId);
+        }
+
+        function navigateToPreviousQuestion() {
+            let prevId = activeQuestionId - 1;
+            if (activeQuestionId === 121) prevId = 90;
+            else if (activeQuestionId === 91) prevId = 130;
+            else if (activeQuestionId === 1) prevId = 120;
+            switchActiveQuestionIndex(prevId);
+        }
+
+        function triggerKaTexDOMTreeParsing() {
+            if (typeof renderMathInElement === "function") {
+                renderMathInElement(document.body, {
+                    delimiters: [
+                        { left: "$$", right: "$$", display: true },
+                        { left: "$", right: "$", display: false },
+                        { left: "\\(", right: "\\)", display: false },
+                        { left: "\\[", right: "\\]", display: true }
+                    ],
+                    throwOnError: false
+                });
+            }
+        }
+
+        // Countdown Timer Engine Module Initialization Logic
+        function initCountdownTimerClock() {
+            const clockNode = document.getElementById("cbt-countdown-clock");
+            
+            if (countTimerIntervalId) clearInterval(countTimerIntervalId);
+            
+            countTimerIntervalId = setInterval(() => {
+                if (countdownDurationSeconds <= 0) {
+                    clearInterval(countTimerIntervalId);
+                    clockNode.innerText = "00:00:00";
+                    triggerTestSubmission(true); // Hard auto-submit trigger without authorization query prompts
+                    return;
+                }
+                
+                countdownDurationSeconds--;
+                
+                // Format visualization profiles array parameters elements
+                const hrs = Math.floor(countdownDurationSeconds / 3600);
+                const mins = Math.floor((countdownDurationSeconds % 3600) / 60);
+                const secs = countdownDurationSeconds % 60;
+                
+                clockNode.innerText = `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+                
+                // Periodic background storage syncing execution trace checks tracking matrices parameters
+                if (countdownDurationSeconds % 10 === 0) {
+                    const meta = { remainingTimer: countdownDurationSeconds, testSubmitted: false };
+                    localStorage.setItem(META_KEY, JSON.stringify(meta));
+                }
+            }, 1000);
+        }
+
+        function triggerTestSubmission(isForcedAutoSubmit = false) {
+            commitRunningTimeSpentCounter();
+            
+            if (!isForcedAutoSubmit) {
+                const conf = confirm("Verification confirmation alert:\nAre you completely sure you want to end your exam performance testing sheet and review scores?");
+                if (!conf) return;
+            }
+
+            clearInterval(countTimerIntervalId);
+            
+            // Mark validation state properties inside persistence vectors
+            const meta = { remainingTimer: 0, testSubmitted: true };
+            localStorage.setItem(META_KEY, JSON.stringify(meta));
+            
+            executeFinalUIRenderSubmission();
+        }
+
+        function executeFinalUIRenderSubmission() {
+            // Unmount interactable layers panels workflows structures completely
+            document.getElementById("primary-test-workspace").remove();
+            document.getElementById("top-submit-trigger").remove();
+            
+            const layoutMainNode = document.getElementById("post-test-analytics-dashboard");
+            layoutMainNode.classList.remove("hidden");
+
+            // Calculate operational metrics tracking data tables
+            let scoresMetrics = {
+                total: 0, attempted: 0, correct: 0, incorrect: 0, skipped: 0,
+                subjects: {
+                    Physics: { total: 0, correct: 0, incorrect: 0, score: 0 },
+                    Chemistry: { total: 0, correct: 0, incorrect: 0, score: 0 },
+                    LR: { total: 0, correct: 0, incorrect: 0, score: 0 }, // Holds aggregated parameters logic tracks
+                    Mathematics: { total: 0, correct: 0, incorrect: 0, score: 0 }
+                }
+            };
+
+            const detailedAuditTbody = document.getElementById("detailed-audit-tbody");
+            detailedAuditTbody.innerHTML = "";
+
+            for (let i = 1; i <= 130; i++) {
+                if(!questionsDataset[i]) continue;
+                const q = questionsDataset[i];
+                
+                // Normalize evaluation metrics mappings target configurations sets tags bounds properties details layout records tracking properties links strings variables
+                let subKey = q.subject;
+                if (subKey === "LR Part 2") subKey = "LR"; // Map combined telemetry streams natively here
+
+                let status = "Skipped";
+                let pointsComputed = 0;
+
+                if (q.selectedOption) {
+                    scoresMetrics.attempted++;
+                    if (String(q.selectedOption).trim().toUpperCase() === String(q.correct).trim().toUpperCase()) {
+                        status = "Correct";
+                        pointsComputed = 3;
+                        scoresMetrics.correct++;
+                        scoresMetrics.subjects[subKey].correct++;
+                    } else {
+                        status = "Incorrect";
+                        pointsComputed = -1;
+                        scoresMetrics.incorrect++;
+                        scoresMetrics.subjects[subKey].incorrect++;
+                    }
+                } else {
+                    scoresMetrics.skipped++;
+                }
+
+                scoresMetrics.total += pointsComputed;
+                scoresMetrics.subjects[subKey].total++;
+                scoresMetrics.subjects[subKey].score += pointsComputed;
+
+                // Build structural evaluation visual auditing list rows elements nodes natively
+                const row = document.createElement("tr");
+                row.className = status === "Correct" ? "bg-emerald-50/60 hover:bg-emerald-50 text-slate-800" : status === "Incorrect" ? "bg-red-50/60 hover:bg-red-50 text-slate-800" : "bg-white hover:bg-slate-50 text-slate-700";
+                
+                let badgeClass = "bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase border";
+                if (status === "Correct") badgeClass = "bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-[10px] font-bold uppercase border border-emerald-300";
+                if (status === "Incorrect") badgeClass = "bg-red-100 text-red-800 px-2 py-0.5 rounded text-[10px] font-bold uppercase border border-red-300";
+
+                row.innerHTML = `
+                    <td class="p-3 border-b border-slate-200 font-mono font-bold">${i}</td>
+                    <td class="p-3 border-b border-slate-200 text-slate-500 uppercase font-bold">${subKey}</td>
+                    <td class="p-3 border-b border-slate-200"><span class="${badgeClass}">${status}</span></td>
+                    <td class="p-3 border-b border-slate-200 font-bold ${q.selectedOption ? 'text-slate-800':'text-slate-400'}">${q.selectedOption || '--'}</td>
+                    <td class="p-3 border-b border-slate-200 font-bold text-blue-700">${q.correct}</td>
+                    <td class="p-3 border-b border-slate-200 font-mono text-slate-500">${q.timeSpent || 0}s</td>
+                    <td class="p-3 border-b border-slate-200 text-slate-600 truncate max-w-xs font-normal">${q.text.substring(0, 75)}...</td>
+                `;
+                detailedAuditTbody.appendChild(row);
+            }
+
+            // Sync structural display variables elements elements values profiles panels parameters blocks view data
+            document.getElementById("res-total-score").innerHTML = `${scoresMetrics.total} <span class="text-xs text-slate-400">/ 390</span>`;
+            document.getElementById("res-total-attempted").innerText = scoresMetrics.attempted;
+            document.getElementById("res-total-correct").innerText = scoresMetrics.correct;
+            document.getElementById("res-total-incorrect").innerText = scoresMetrics.incorrect;
+            
+            const accuracyVal = scoresMetrics.attempted > 0 ? Math.round((scoresMetrics.correct / scoresMetrics.attempted) * 100) : 0;
+            document.getElementById("res-accuracy").innerText = `${accuracyVal}%`;
+
+            // Build dynamic display metrics for section table elements nodes variables
+            const subTbody = document.getElementById("subject-performance-tbody");
+            subTbody.innerHTML = "";
+            
+            const displayMappingOrder = ["Physics", "Chemistry", "Mathematics", "LR"];
+            displayMappingOrder.forEach(subName => {
+                const subData = scoresMetrics.subjects[subName];
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td class="p-3 border-b border-slate-200 font-bold uppercase text-slate-800">${subName === 'LR' ? 'LR & English' : subName}</td>
+                    <td class="p-3 border-b border-slate-200 font-mono">${subName === 'LR' ? 40 : 30}</td>
+                    <td class="p-3 border-b border-slate-200 font-mono text-slate-600">${subData.correct + subData.incorrect}</td>
+                    <td class="p-3 border-b border-slate-200 font-mono text-emerald-600 font-bold">${subData.correct}</td>
+                    <td class="p-3 border-b border-slate-200 font-mono text-red-500">${subData.incorrect}</td>
+                    <td class="p-3 border-b border-slate-200 font-mono font-extrabold text-indigo-700 bg-slate-50">${subData.score}</td>
+                `;
+                subTbody.appendChild(row);
+            });
+
+            // Re-trigger global formula formatting layout updates metrics tracking values logs parameters blocks
+            triggerKaTexDOMTreeParsing();
+        }
+
+        function emergencyClearCache() {
+            if (confirm("Developer Alert: Clear local browser engine telemetry records and reload?")) {
+                const prefixes = [LOCAL_PREFIX, META_KEY];
+                const targets = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const k = localStorage.key(i);
+                    if (prefixes.some(p => k.startsWith(p))) targets.push(k);
+                }
+                targets.forEach(k => localStorage.removeItem(k));
+                window.location.reload();
+            }
+        }
+    </script>
+</body>
+</html>
